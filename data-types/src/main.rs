@@ -32,11 +32,11 @@ fn main() {
 	let f_32_value: f32 = 3.4;
 	println!("f32 value: {:?}", f_32_value);
 
-    let ch_heart_eyed_cat = "🤣";
-    println!("emotic's character: {:?}", ch_heart_eyed_cat);
+  let ch_heart_eyed_cat = "🤣";
+  println!("emotic's character: {:?}", ch_heart_eyed_cat);
 
-    let str_value = "Stivenson";
-    println!("A String value: {:?}", str_value);
+  let str_value = "Stivenson";
+  println!("A String value: {:?}", str_value);
 
 
 	println!("------------------------");
