@@ -1,0 +1,17 @@
+[package]
+name = "parking-api"
+version = "0.1.0"
+authors = ["Stivenson Rincón <stivenson.rpm@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rocket = "0.4.1"
+rocket_codegen = "0.4.1"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+
+[dependencies.rocket_contrib]
+version = "*"
+default-features = false
+features = ["json"]
