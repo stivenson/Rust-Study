@@ -1,6 +1,6 @@
 use std::io;
 
-static VALUES_COP: &'static [i32;4] = &[50000, 20000, 10000, 2000];
+const VALUES_COP: &'static [i32;4] = &[50000, 20000, 10000, 2000];
 
 // macro called cashier
 macro_rules! cashier {
