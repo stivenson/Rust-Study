@@ -1,5 +1,7 @@
 use std::io;
 
+static VALUES_COP: &'static [i32;4] = &[50000, 20000, 10000, 2000];
+
 // macro called cashier
 macro_rules! cashier {
     () => { // without arguments
@@ -7,7 +9,6 @@ macro_rules! cashier {
     };
     ($($x: expr),+) => { // 1 to n arguments
         {
-            let values: [u32;4] = [50000, 20000, 10000, 2000]; 
             let mut total: u64 = 0;
             let mut _i: usize = 0;
             $( // cycle
@@ -15,7 +16,7 @@ macro_rules! cashier {
                     .trim()
                     .parse()
                     .expect("Wanted a number");
-                total = total + (number * values[_i] as u64); // logic of operation
+                total = total + (number * VALUES_COP[_i] as u64); // logic of operation
                 _i += 1; // "_" to omit alert of use
             )+
             println!("Current Total {:?}", &total);
