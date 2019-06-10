@@ -128,15 +128,18 @@ impl AnimalVisitor for SoundsAnimals {
 
 /// Main method to use all
 fn main() {
-    let mut sounds_animal = SoundsAnimals {repetitions: 8}; 
+
+    /// Explication of visitor pattern: https://es.wikipedia.org/wiki/Visitor_(patr%C3%B3n_de_dise%C3%B1o)
+
+    let mut sounds_animal = SoundsAnimals {repetitions: 8}; // struct of visitor
     // Cat
     let cat = Cat {name: "Misifú".to_string(), color: "gray".to_string()}; // struct of cat
-    println!("Cat's description: {:?}", cat.get_description());
-    println!("Cat's sound: {:?}", cat.sound(&mut sounds_animal)); // logic in visitor
+    println!("Cat's description: {:?}", cat.get_description()); // logic in own implementation
+    println!("Cat's sound: {:?}", cat.sound(&mut sounds_animal)); // logic in visitor: differents logics in the visitor but the cat chooses which to use.
 
     // Dog
     let dog = Dog {name: "Siboney".to_string(), color: "white".to_string(), age: 7}; // struct of dog
-    println!("Dog's description: {:?}", dog.get_description());
-    println!("Dog's sound: {:?}", dog.sound(&mut sounds_animal)); // logic in visitor
+    println!("Dog's description: {:?}", dog.get_description()); // logic in own implementation
+    println!("Dog's sound: {:?}", dog.sound(&mut sounds_animal)); // logic in visitor: differents logics in the visitor but the dog chooses which to use.
 
 }
