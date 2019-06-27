@@ -52,15 +52,25 @@ impl<T> CacherFindText<T> // Implementation of process to search words and data 
         v
     }
 
-    fn get_cache_result(&mut self, index: usize, arg: &str) -> u64 {
-        if let Some(op) = &self.preview_results[index] {
-            self.last_result = Some(
-                TupleResultSearch {
-                    amount: op.amount,
-                    word: arg.to_string()
-                }
-            );
-            op.amount
+    fn check_cache_result(&mut self, arg: &str) -> u64 {
+        let index_cache = &self.preview_results.iter().position(|r| {
+            match r {
+                Some(xt) => &xt.word == arg,
+                None => false
+            }
+        });
+        if let Some(index) = index_cache {
+            if let Some(op) = &self.preview_results[*index] {
+                self.last_result = Some(
+                    TupleResultSearch {
+                        amount: op.amount,
+                        word: arg.to_string()
+                    }
+                );
+                op.amount
+            } else {
+                self.run_heavy_process_and_get_result(arg)
+            }
         } else {
             self.run_heavy_process_and_get_result(arg)
         }
@@ -72,17 +82,7 @@ impl<T> CacherFindText<T> // Implementation of process to search words and data 
                 if v.word == arg {
                     v.amount
                 } else {
-                    let index_cache = &self.preview_results.iter().position(|r| {
-                        match r {
-                            Some(xt) => &xt.word == arg,
-                            None => false
-                        }
-                    });
-
-                    match index_cache {
-                        Some(index) => self.get_cache_result(*index, arg),
-                        None => self.run_heavy_process_and_get_result(arg)
-                    }
+                    self.check_cache_result(arg)
                 }
             },
             None => self.run_heavy_process_and_get_result(arg)
