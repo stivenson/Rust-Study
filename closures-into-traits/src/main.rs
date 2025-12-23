@@ -1,125 +1,129 @@
 use std::{fmt, fs};
 
-#[derive(Debug)]
-struct TupleResultSearch {
-    amount: u64,
+#[derive(Debug, Clone)]
+struct SearchResult {
+    position: u64,
     word: String,
 }
 
-impl fmt::Display for TupleResultSearch {
+impl fmt::Display for SearchResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "word: {:?}, amount: {:?}", self.word, self.amount)
+        write!(f, "word: '{}', position: {}", self.word, self.position)
     }
 }
 
-struct CacherFindText<T> // "Struct" with generics to save data of process
-    where T: Fn(&str) -> u64 // add structure to generic: "T". This structure is the "closure"
+/// Generic cacher that stores results of expensive operations
+struct CacherFindText<T>
+where
+    T: Fn(&str) -> u64,
 {
-    heavy_process: T, // To save the "closure" with heavy logic
-    last_result: Option<TupleResultSearch>, // Result of last search
-    preview_results: Vec<Option::<TupleResultSearch>>, // To save search results and be able to reuse them
+    heavy_process: T,
+    last_result: Option<SearchResult>,
+    cached_results: Vec<SearchResult>,
 }
 
-impl<T> CacherFindText<T> // Implementation of process to search words and data caching
-    where T: Fn(&str) -> u64
+impl<T> CacherFindText<T>
+where
+    T: Fn(&str) -> u64,
 {
-    fn new(heavy_process: T) -> CacherFindText<T> { // Init data
+    fn new(heavy_process: T) -> Self {
         CacherFindText {
             heavy_process,
             last_result: None,
-            preview_results: Vec::new()
+            cached_results: Vec::new(),
         }
     }
 
-    fn update_last_result(&mut self, arg: &str, v: &u64) {
-        self.last_result = Some(
-            TupleResultSearch {
-                amount: *v,
-                word: arg.to_string()
-            }
-        );
-    }
-
-    fn run_heavy_process_and_get_result(&mut self, arg: &str) -> u64 {
-        let v = (&self.heavy_process)(arg);
-        &self.update_last_result(arg, &v);
-        &self.preview_results.push(Some(
-                TupleResultSearch {
-                    amount: v,
-                    word: arg.to_string()
-                }
-            ));
-        v
-    }
-
-    fn check_cache_result(&mut self, arg: &str) -> u64 {
-        let index_cache = &self.preview_results.iter().position(|r| {
-            match r {
-                Some(xt) => &xt.word == arg,
-                None => false
-            }
+    fn update_last_result(&mut self, word: &str, position: u64) {
+        self.last_result = Some(SearchResult {
+            position,
+            word: word.to_string(),
         });
-        if let Some(index) = index_cache {
-            if let Some(op) = &self.preview_results[*index] {
-                self.last_result = Some(
-                    TupleResultSearch {
-                        amount: op.amount,
-                        word: arg.to_string()
-                    }
-                );
-                op.amount
-            } else {
-                self.run_heavy_process_and_get_result(arg)
-            }
-        } else {
-            self.run_heavy_process_and_get_result(arg)
-        }
     }
 
-    fn search(&mut self, arg: &str) -> u64 {
-        match &self.last_result {
-            Some(v) => {
-                if v.word == arg {
-                    v.amount
-                } else {
-                    self.check_cache_result(arg)
-                }
-            },
-            None => self.run_heavy_process_and_get_result(arg)
+    fn run_process_and_cache(&mut self, word: &str) -> u64 {
+        let position = (self.heavy_process)(word);
+        
+        let result = SearchResult {
+            position,
+            word: word.to_string(),
+        };
+        
+        self.last_result = Some(result.clone());
+        self.cached_results.push(result);
+        
+        position
+    }
+
+    fn check_cache(&mut self, word: &str) -> Option<u64> {
+        self.cached_results
+            .iter()
+            .find(|r| r.word == word)
+            .map(|r| {
+                self.last_result = Some(r.clone());
+                r.position
+            })
+    }
+
+    fn search(&mut self, word: &str) -> u64 {
+        // Check last result first
+        if let Some(ref last) = self.last_result {
+            if last.word == word {
+                return last.position;
+            }
         }
+
+        // Check cache
+        if let Some(position) = self.check_cache(word) {
+            return position;
+        }
+
+        // Run expensive operation
+        self.run_process_and_cache(word)
     }
 }
 
 
 
-fn find_words(words_to_find: [&str; 20]) { // Use of implementation to search words and data caching
+fn find_words(words_to_find: &[&str]) {
+    println!("=== Closures and Caching Example ===\n");
 
-    // Use of "Struct" with generics to run "closure with heavy logic" and save results in cache(an array of results)
-    let mut expensive_result = CacherFindText::new(|word| {
+    // Create a cacher with a closure that performs expensive file I/O
+    let mut cacher = CacherFindText::new(|word| {
+        // Expensive operation: read file and search for word
+        let filename = "text_to_find.txt";
+        let contents = fs::read_to_string(filename)
+            .expect("Failed to read file");
         
-        // Heavy logic //
-
-        let fname = "text_to_find.txt";
-        // Contents of file
-        let contents = fs::read_to_string(fname).expect("Something went wrong reading the file");
-        // Search a word into file's content
-        match contents.find(word) {
-            Some(v) => v as u64, 
-            None => 0
-        }
-
+        contents.find(word).map(|v| v as u64).unwrap_or(0)
     });
 
-    // Apply search to each word
-    for word in &words_to_find {
-        // expensive_result.search will search word in file or get result from cache if the search for the word has already been made.
-        println!("Word {:?} found in position: {:?} into file.", word, &expensive_result.search(word)); 
+    // Search for each word (results are cached automatically)
+    for word in words_to_find {
+        let position = cacher.search(word);
+        if position > 0 {
+            println!("Word '{}' found at position: {}", word, position);
+        } else {
+            println!("Word '{}' not found", word);
+        }
     }
+
+    println!("\nCache statistics:");
+    println!("Total cached results: {}", cacher.cached_results.len());
 }
 
 fn main() {
-    // array of words to search into file.
-    let words_to_find: [&str; 20] = ["ddddd", "oportere", "oportere", "oportere", "desconocida" ,"sit", "meiuuuuu", "meiuuuuu", "meiuuuuu", "meiuuuuu", "meiuuuuu", "desconocida", "desconocida", "dddddaaaa", "instructiorrrrr", "instructiorrrrr", "instructiorrrrr", "oportere", "desconocida", "dddddaaaa"];
-    // Run logic
-    find_words(words_to_find);
+    // Array of words to search (includes duplicates to demonstrate caching)
+    let words_to_find = [
+        "oportere",
+        "oportere", // duplicate - will use cache
+        "oportere", // duplicate - will use cache
+        "sit",
+        "desconocida",
+        "desconocida", // duplicate - will use cache
+        "unknown_word",
+        "oportere", // duplicate - will use cache
+    ];
+
+    find_words(&words_to_find);
 }

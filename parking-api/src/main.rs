@@ -1,16 +1,11 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
-
-use rocket_contrib::json::JsonValue;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
+use rocket::{get, post, put, delete, routes};
+use serde_json::{json, Value as JsonValue};
 
 mod car;
-use car::{Car};
+use car::Car;
 
-#[post("/", data = "<car>")]
+#[post("/", format = "json", data = "<car>")]
 fn create(car: Json<Car>) -> Json<Car> {
     car
 }
@@ -23,19 +18,23 @@ fn read() -> JsonValue {
     ])
 }
 
-#[put("/<id>", data = "<car>")]
-fn update(id: i32, car: Json<Car>) -> Json<Car> {
+#[put("/<id>", format = "json", data = "<car>")]
+fn update(_id: i32, car: Json<Car>) -> Json<Car> {
     car
 }
 
 #[delete("/<id>")]
-fn delete(id: i32) -> JsonValue {
+fn delete(_id: i32) -> JsonValue {
     json!({"status": "ok"})
 }
 
-fn main() {
-    rocket::ignite()
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
+    let _rocket = rocket::build()
         .mount("/car", routes![create, update, delete])
         .mount("/cars", routes![read])
-        .launch();
+        .launch()
+        .await?;
+    
+    Ok(())
 }

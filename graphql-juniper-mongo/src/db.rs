@@ -1,12 +1,11 @@
-use bson::{from_bson, oid::ObjectId, to_bson, Bson, Document};
+use bson::{doc, oid::ObjectId};
+use futures::stream::TryStreamExt;
 use mongodb::{
-    coll::options::{FindOneAndUpdateOptions, ReturnDocument},
-    coll::Collection,
-    db::ThreadedDatabase,
-    Client, ThreadedClient,
+    options::{FindOneAndReplaceOptions, ReturnDocument},
+    Client, Collection,
 };
 
-use crate::allerrors::Error;
+use crate::allerrors::AppError;
 use crate::model::Product;
 
 pub struct Db {
@@ -15,69 +14,69 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn new<S>(db_name: S) -> Db
+    pub async fn new<S>(db_name: S) -> Result<Self, AppError>
     where
         S: ToString,
     {
         let db_name = db_name.to_string();
-        let client = Client::connect("127.0.0.1", 27017).expect("Failed to initialize client.");
-        Db { client, db_name }
+        let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .await
+            .map_err(|e| AppError::Custom(format!("Failed to connect to MongoDB: {}", e)))?;
+        Ok(Db { client, db_name })
     }
 
-    pub fn list_products(&self) -> Result<Vec<Product>, Error> {
-        let coll: Collection = self.client.db(&self.db_name).collection("products");
-        let cursor = coll.find(None, None)?;
-        let res: Result<Vec<_>, _> = cursor
-            .map(|row| row.and_then(|item| Ok(from_bson::<Product>(Bson::Document(item))?)))
-            .collect();
-
-        Ok(res?)
+    fn get_collection(&self) -> Collection<Product> {
+        self.client
+            .database(&self.db_name)
+            .collection::<Product>("products")
     }
 
-    pub fn get_product(&self, id: &str) -> Result<Option<Product>, Error> {
-        let coll: Collection = self.client.db(&self.db_name).collection("products");
-        let cursor: Option<Document> = coll.find_one(Some(doc! { "_id": ObjectId::with_string(id)? }), None)?;
-        cursor
-            .map(|doc| Ok(from_bson::<Product>(Bson::Document(doc))?))
-            .map_or(Ok(None), |v| v.map(Some))
+    pub async fn list_products(&self) -> Result<Vec<Product>, AppError> {
+        let collection = self.get_collection();
+        let mut cursor = collection.find(None, None).await?;
+        let mut products = Vec::new();
+        
+        while let Some(product) = cursor.try_next().await? {
+            products.push(product);
+        }
+        
+        Ok(products)
     }
 
-    pub fn save_product(&self, prod: Product) -> Result<Option<Product>, Error> {
-        let coll: Collection = self.client.db(&self.db_name).collection("products");
+    pub async fn get_product(&self, id: &str) -> Result<Option<Product>, AppError> {
+        let collection = self.get_collection();
+        let object_id = ObjectId::parse_str(id)?;
+        let product = collection
+            .find_one(doc! { "_id": object_id }, None)
+            .await?;
+        Ok(product)
+    }
 
-        if let Bson::Document(mut doc) = to_bson(&prod)? {
-            doc.remove("_id");
-            if let Some(ref id) = prod.id {
-                let filter = doc!{ "_id": Bson::ObjectId(id.clone()) };
-                let write_options = FindOneAndUpdateOptions {
-                    return_document: Some(ReturnDocument::After),
-                    ..Default::default()
-                };
-                let res = coll.find_one_and_replace(filter, doc, Some(write_options))?;
-                if let Some(res) = res {
-                    Ok(Some(from_bson::<Product>(Bson::Document(res))?))
-                } else {
-                    Err(Error::Custom("No data returned after update".into()))
-                }
-            } else {
-                let res = coll.insert_one(doc, None)?;
+    pub async fn save_product(&self, mut prod: Product) -> Result<Option<Product>, AppError> {
+        let collection = self.get_collection();
 
-                if let Some(exception) = res.write_exception {
-                    return Err(Error::from(exception));
-                }
-
-                if let Some(inserted_id) = res.inserted_id {
-                    if let Bson::ObjectId(id) = inserted_id {
-                        self.get_product(&id.to_hex())
-                    } else {
-                        Err(Error::Custom("No valid id returned after insert".into()))
-                    }
-                } else {
-                    Err(Error::Custom("No data returned after insert".into()))
-                }
-            }
+        if let Some(id) = prod.id {
+            // Update existing product
+            prod.id = None; // Remove id from the document to be updated
+            let filter = doc! { "_id": id };
+            let options = FindOneAndReplaceOptions::builder()
+                .return_document(ReturnDocument::After)
+                .build();
+            
+            let result = collection
+                .find_one_and_replace(filter, prod, options)
+                .await?;
+            
+            Ok(result)
         } else {
-            Err(Error::Custom("Invalid document".into()))
+            // Insert new product
+            let result = collection.insert_one(prod, None).await?;
+            let inserted_id = result
+                .inserted_id
+                .as_object_id()
+                .ok_or_else(|| AppError::Custom("No valid id returned after insert".into()))?;
+            
+            self.get_product(&inserted_id.to_hex()).await
         }
     }
 }

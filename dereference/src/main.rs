@@ -1,20 +1,21 @@
 use std::ops::{Deref, DerefMut};
 
-
 //////////////////////// Basic Example ////////////////////////
-fn change_phrase_value (phrase: &mut String) {
-    let other_phrase = "and born in Cúcuta city".to_string();
+fn change_phrase_value(phrase: &mut String) {
+    let other_phrase = "and born in Cúcuta city";
 
-    // Following the pointer (with dereferencing) to find the value and change it.
-    *phrase = format!("{} {}", &phrase, other_phrase); 
+    // Following the pointer (dereferencing) to modify the value
+    *phrase = format!("{} {}", phrase, other_phrase);
 }
 
-
-fn with_basic_use_dereference () {
+fn with_basic_use_dereference() {
     let mut phrase = String::from("James Rodriguez is a colombian player");
     change_phrase_value(&mut phrase);
-    println!("{:?}", &phrase);
-    assert_eq!(phrase, String::from("James Rodriguez is a colombian player and born in Cúcuta city")); // Test
+    println!("{}", phrase);
+    assert_eq!(
+        phrase,
+        "James Rodriguez is a colombian player and born in Cúcuta city"
+    );
 }
 
 
@@ -22,7 +23,7 @@ fn with_basic_use_dereference () {
 /////////////////// With Deref Trait //////////////////////////////
 
 struct DeRefJames<T> {
-    phrase: T
+    phrase: T,
 }
 
 impl<T> Deref for DeRefJames<T> {
@@ -33,15 +34,20 @@ impl<T> Deref for DeRefJames<T> {
     }
 }
 
-fn with_deref_trait_use () {
-    let mut james_deref = DeRefJames { phrase: "James Rodriguez is a colombian player".to_string() };
-    let other_phrase = "and born in Cúcuta city".to_string();
+fn with_deref_trait_use() {
+    let mut james_deref = DeRefJames {
+        phrase: "James Rodriguez is a colombian player".to_string(),
+    };
+    let other_phrase = "and born in Cúcuta city";
 
-    // Using the struct with Deref implementation, to find the value and change it.
+    // Using Deref to access the inner value
     james_deref.phrase = format!("{} {}", *james_deref, other_phrase);
 
-    println!("{:?}", *james_deref);
-    assert_eq!("James Rodriguez is a colombian player and born in Cúcuta city", *james_deref);
+    println!("{}", *james_deref);
+    assert_eq!(
+        "James Rodriguez is a colombian player and born in Cúcuta city",
+        &*james_deref
+    );
 }
 
 
@@ -55,32 +61,34 @@ impl<T> DerefMut for DeRefJames<T> {
     }
 }
 
-fn with_derefmut_trait_use () {
-    let mut james_deref = DeRefJames { phrase: "James Rodriguez is a colombian player".to_string() };
-    let other_phrase = "and born in Cúcuta city".to_string();
+fn with_derefmut_trait_use() {
+    let mut james_deref = DeRefJames {
+        phrase: "James Rodriguez is a colombian player".to_string(),
+    };
+    let other_phrase = "and born in Cúcuta city";
 
-    // Using the struct with Deref implementation, to find the value and change it.
+    // Using DerefMut to modify the inner value directly
     *james_deref = format!("{} {}", *james_deref, other_phrase);
 
-    println!("{:?}", *james_deref);
-    assert_eq!("James Rodriguez is a colombian player and born in Cúcuta city", *james_deref);
+    println!("{}", *james_deref);
+    assert_eq!(
+        "James Rodriguez is a colombian player and born in Cúcuta city",
+        &*james_deref
+    );
 }
 
-
-
-
-
 fn main() {
+    println!("=== Dereference Examples ===\n");
 
     // Basic Example
+    println!("1. Basic dereference:");
     with_basic_use_dereference();
 
-
     // With Deref Trait
+    println!("\n2. Deref trait:");
     with_deref_trait_use();
 
-
-    // with Deref Trait
+    // With DerefMut Trait
+    println!("\n3. DerefMut trait:");
     with_derefmut_trait_use();
-
 }

@@ -1,61 +1,68 @@
 struct Man {
-	name: &'static str,
-	cellphone: i64,
-	is_alive: bool,
+    name: &'static str,
+    cellphone: i64,
+    is_alive: bool,
 }
 
 trait Person {
-	fn new(name: &'static str, cellphone: &i64) -> Self;
-	fn name(&self) -> &'static str;
-	fn is_alive(&self) -> &bool;
-	fn cellphone(&self) -> &i64;
+    fn new(name: &'static str, cellphone: i64) -> Self;
+    fn name(&self) -> &'static str;
+    fn is_alive(&self) -> bool;
+    fn cellphone(&self) -> i64;
 
-	fn get_current_age(days_of_live: &i64) -> i64 {
-		return days_of_live / 365;
-	}
+    // Associated function with default implementation
+    fn get_current_age(days_of_live: i64) -> i64 {
+        days_of_live / 365
+    }
 }
 
 impl Man {
-	fn get_full_name_pet(&self, name: &'static str, last_name: &String) -> String {
-		return name.to_string() + " " + &last_name.to_string();
-	}
+    fn get_full_name_pet(&self, name: &str, last_name: &str) -> String {
+        format!("{} {}", name, last_name)
+    }
 
-	fn get_data_city(&self) -> String {
-		return String::from("Cúcuta");
-	}
+    fn get_data_city(&self) -> &'static str {
+        "Cúcuta"
+    }
 }
 
 impl Person for Man {
-	fn new(name: &'static str, cellphone: &i64) -> Man {
-		Man {
-			name: name,
-			cellphone: *cellphone,
-			is_alive: true,
-		}
-	}
-	fn name(&self) -> &'static str {
-		return self.name;
-	}
-	fn cellphone(&self) -> &i64 {
-		return &self.cellphone;
-	}
-	fn is_alive(&self) -> &bool {
-		return &self.is_alive;
-	}
+    fn new(name: &'static str, cellphone: i64) -> Self {
+        Man {
+            name,
+            cellphone,
+            is_alive: true,
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        self.name
+    }
+
+    fn cellphone(&self) -> i64 {
+        self.cellphone
+    }
+
+    fn is_alive(&self) -> bool {
+        self.is_alive
+    }
 }
 
 fn main() {
-	let cellphone: i64 = 3102531280;
-	let days_alive: i64 = 10585;
-	let man: Man = Person::new("Stivenson", &cellphone);
-	let last_name_pet = "Rodriguez".to_string();
+    println!("=== Traits, Structs, and Implementations ===\n");
 
-	println!("Name: {:?}", man.name()); // method
-	println!("Cellphone: {:?}", man.cellphone()); // method
-	println!("City: {:?}", man.get_data_city()); // method
-	println!("Current age: {:?}", Man::get_current_age(&days_alive)); // associated function
-	println!(
-		"Full name of pet: {:?}",
-		man.get_full_name_pet("Sibonei", &last_name_pet)
-	); // method
+    let cellphone = 3_102_531_280i64;
+    let days_alive = 10_585i64;
+    let man = Man::new("Stivenson", cellphone);
+    let last_name_pet = "Rodriguez";
+
+    println!("Name: {}", man.name());
+    println!("Cellphone: {}", man.cellphone());
+    println!("City: {}", man.get_data_city());
+    println!("Current age: {} years", Man::get_current_age(days_alive));
+    println!(
+        "Full name of pet: {}",
+        man.get_full_name_pet("Sibonei", last_name_pet)
+    );
+    println!("Is alive: {}", man.is_alive());
 }
